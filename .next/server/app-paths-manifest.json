@@ -1,0 +1,11 @@
+{
+  "/api/template/route": "app/api/template/route.js",
+  "/api/stage/route": "app/api/stage/route.js",
+  "/api/project/route": "app/api/project/route.js",
+  "/api/owner/route": "app/api/owner/route.js",
+  "/icon.png/route": "app/icon.png/route.js",
+  "/(defaults)/page": "app/(defaults)/page.js",
+  "/(defaults)/template/page": "app/(defaults)/template/page.js",
+  "/(defaults)/owner/page": "app/(defaults)/owner/page.js",
+  "/(defaults)/project/page": "app/(defaults)/project/page.js"
+}
