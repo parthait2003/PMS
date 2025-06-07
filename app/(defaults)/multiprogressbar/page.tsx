@@ -1,8 +1,14 @@
 'use client';
 import MultiStepProgressBar from "@/components/datatables/components-datatables-multiprogressbar";
 
+type Step = {
+  label: string;
+  status: "complete" | "inprogress" | "upcoming";
+  tasks: string;
+};
+
 export default function Page() {
-  const steps = [
+  const steps: Step[] = [
     { label: 'Onboarding Stage', status: 'complete', tasks: '2/2 tasks' },
     { label: 'Design Stage', status: 'inprogress', tasks: '4/5 tasks' },
     { label: 'Development', status: 'inprogress', tasks: '0/1 tasks' },
