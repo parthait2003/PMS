@@ -1,4 +1,4 @@
-import projectTask from "@/models/projectTask";
+import projectTask from "@/models/ProjectTask";
 import connectMongoDB from "@/config/database"; // Your MongoDB connection utility
 import { NextResponse } from "next/server";
 
