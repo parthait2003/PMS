@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import projectTask from "@/models/projectTask";
+import projectTask from "@/models/ProjectTask";
 import connectMongoDB from "@/config/database";
 
 // Middleware to ensure DB is connected
