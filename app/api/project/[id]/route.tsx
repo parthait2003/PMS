@@ -1,6 +1,6 @@
 import Project from "@/models/Project";
-import projectTask from "@/models/projectTask";
-import taskMessage from "@/models/taskMessage";
+import projectTask from "@/models/ProjectTask";
+import taskMessage from "@/models/TaskMessage";
 import connectMongoDB from "@/config/database";
 import { NextResponse } from "next/server";
 
