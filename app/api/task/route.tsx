@@ -1,4 +1,4 @@
-import Task from "@/models/task";
+import Task from "@/models/Task";
 import connectMongoDB from "@/config/database";
 import { NextResponse } from "next/server";
 
