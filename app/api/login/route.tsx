@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import connectMongoDB from "@/config/database";
 import User from "@/models/User";
-import Owner from "@/models/owner"
+import Owner from "@/models/Owner"
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
