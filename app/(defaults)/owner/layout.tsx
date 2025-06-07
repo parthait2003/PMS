@@ -27,7 +27,7 @@ export default function DefaultLayout({
         {/* END APP SETTING LAUNCHER */}
 
         <MainContainer>
-          <Header />
+        
           {/* BEGIN SIDEBAR */}
           <Sidebar />
           {/* END SIDEBAR */}
