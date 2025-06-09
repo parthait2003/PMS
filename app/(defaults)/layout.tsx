@@ -18,6 +18,8 @@ export default function DefaultLayout({ children }: { children: React.ReactNode 
 
                 {/* BEGIN APP SETTING LAUNCHER */}
 
+                <Setting/>
+
                
                 {/* END APP SETTING LAUNCHER */}
 
