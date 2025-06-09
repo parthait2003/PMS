@@ -21,6 +21,8 @@ export default function DefaultLayout({
         <ScrollToTop />
 
         {/* BEGIN APP SETTING LAUNCHER */}
+
+        <Settings/>
      
 
         {/* END APP SETTING LAUNCHER */}
