@@ -22,7 +22,7 @@ export default function DefaultLayout({
 
         {/* BEGIN APP SETTING LAUNCHER */}
 
-     
+          <Setting />
      
 
         {/* END APP SETTING LAUNCHER */}
