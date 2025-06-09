@@ -17,6 +17,8 @@ export default function DefaultLayout({ children }: { children: React.ReactNode 
                 <ScrollToTop />
 
                 {/* BEGIN APP SETTING LAUNCHER */}
+
+                <Settings/>
                
                 {/* END APP SETTING LAUNCHER */}
 
