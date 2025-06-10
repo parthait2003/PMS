@@ -11,11 +11,13 @@ const AssigneeTaskDetails = () => {
     const [showModal, setShowModal] = useState(false);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
-    const [newFiles, setNewFiles] = useState([]);
+    const [newFiles, setNewFiles] = useState([null]);
     const fileInputRef = useRef(null);
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [readStatus, setReadstatus] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState(null);
+
 
     useEffect(() => {
         if (id) fetchData();
@@ -29,11 +31,11 @@ const AssigneeTaskDetails = () => {
             const { data: projectData } = await resProject.json();
             console.log("Raw project data:", projectData);
             setProjects(projectData);
-    
+
             // Flatten tasks and map assignees
             const allTasks = projectData.flatMap(project => {
-                const assigneeId = project.assignees && project.assignees.length > 0 
-                    ? project.assignees[0].id 
+                const assigneeId = project.assignees && project.assignees.length > 0
+                    ? project.assignees[0].id
                     : null;
 
                 return project.tasks.map(task => ({
@@ -53,7 +55,7 @@ const AssigneeTaskDetails = () => {
             const currentTask = allTasks.find(t => t._id === id);
             console.log("Current task:", currentTask);
             setTask(currentTask);
-    
+
             // Fetch messages
             const resMessages = await fetch("/api/taskMessage");
             if (!resMessages.ok) throw new Error("Failed to fetch messages");
@@ -61,7 +63,7 @@ const AssigneeTaskDetails = () => {
             const relatedMessages = allMessages.filter(msg => msg.taskId === id);
             setMessages(relatedMessages);
             console.log("Fetched messages:", relatedMessages);
-    
+
             // Fetch users
             const resUsers = await fetch("/api/user");
             if (!resUsers.ok) throw new Error("Failed to fetch users");
@@ -72,7 +74,7 @@ const AssigneeTaskDetails = () => {
                 type: "user",
             }));
             console.log("User data:", usersArray);
-    
+
             // Fetch owners
             const resOwners = await fetch("/api/owner");
             if (!resOwners.ok) throw new Error("Failed to fetch owners");
@@ -90,7 +92,7 @@ const AssigneeTaskDetails = () => {
                 };
             }).filter(owner => owner !== null);
             console.log("Normalized owners:", normalizedOwners);
-    
+
             const combinedUsers = [...usersArray, ...normalizedOwners];
             console.log("Combined users:", combinedUsers);
             setUsers(combinedUsers);
@@ -99,7 +101,7 @@ const AssigneeTaskDetails = () => {
                 const assigneeExists = combinedUsers.some(user => String(user._id) === String(currentTask.assignee));
                 console.log("Assignee exists in users:", assigneeExists);
             }
-    
+
         } catch (err) {
             console.error("Fetch error:", err);
             Swal.fire("Error", "Failed to load data", "error");
@@ -113,7 +115,7 @@ const AssigneeTaskDetails = () => {
         const assignee = project?.assignees.find(a => a.id === assigneeId);
         return assignee?.name || "Unknown Assignee";
     };
-    
+
     const getSenderName = (userId) => {
         console.log("Looking for userId:", userId);
         const user = users.find((u) => String(u._id) === String(userId));
@@ -141,9 +143,11 @@ const AssigneeTaskDetails = () => {
         console.log("Submitting message with assigneeId:", task.assignee);
 
         try {
+            const validFiles = newFiles.filter(file => file !== null); // 👈 filter out null files
+
             // Upload files to DigitalOcean Spaces
             const uploadedFileUrls = [];
-            for (const file of newFiles) {
+            for (const file of validFiles) {
                 const formData = new FormData();
                 formData.append('file', file);
 
@@ -153,7 +157,7 @@ const AssigneeTaskDetails = () => {
                 });
 
                 if (!uploadResponse.ok) {
-                    throw new Error(`Failed to upload file: ${file.name}`);
+                    throw new Error(`Failed to upload file: ${file?.name || "Unknown file"}`);
                 }
 
                 const uploadResult = await uploadResponse.json();
@@ -176,7 +180,7 @@ const AssigneeTaskDetails = () => {
                     taskId: task._id,
                     assigneeId: task.assignee,
                     senderId: senderId,
-                    files: uploadedFileUrls, // Send URLs instead of file names
+                    files: uploadedFileUrls,
                 }),
             });
 
@@ -263,20 +267,34 @@ const AssigneeTaskDetails = () => {
                                     <div>
                                         <span className="font-semibold text-gray-800 text-xl">Files:</span>{" "}
                                         {msg.files.length > 0 ? (
-                                            msg.files.map((url, index) => (
-                                                <a
-                                                    key={index}
-                                                    href={url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:underline"
-                                                >
-                                                   View File 
-                                                </a>
-                                            )).reduce((prev, curr, i) => (i === 0 ? [curr] : [...prev, ", ", curr]), [])
-                                        ) : (
-                                            "No files"
-                                        )}
+    <div className="flex flex-wrap gap-2">
+        {msg.files.map((url, index) => {
+            const isImage = /\.(jpeg|jpg|png|gif)$/i.test(url);
+            return isImage ? (
+                <img
+                    key={index}
+                    src={url}
+                    alt={`file-${index}`}
+                    className="w-20 h-20 object-cover rounded cursor-pointer border"
+                    onClick={() => setPreviewImageUrl(url)}
+                />
+            ) : (
+                <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                >
+                    View File
+                </a>
+            );
+        })}
+    </div>
+) : (
+    "No files"
+)}
+
                                     </div>
                                 </li>
                             );
@@ -300,15 +318,45 @@ const AssigneeTaskDetails = () => {
                                 />
                             </div>
                             <div className="mb-4">
-                                <label className="block font-medium mb-1">File(s)</label>
-                                <input
-                                    type="file"
-                                    multiple
-                                    ref={fileInputRef}
-                                    onChange={(e) => setNewFiles(e.target.files ? Array.from(e.target.files) : [])}
-                                    className="block w-full"
-                                    accept="image/jpeg,image/png,application/pdf"
-                                />
+                                <label className="block font-medium mb-2">File(s)</label>
+
+                                {newFiles.map((file, index) => (
+                                    <div key={index} className="flex items-center gap-2 mb-2">
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,application/pdf"
+                                            onChange={(e) => {
+                                                const selectedFile = e.target.files?.[0] || null;
+                                                setNewFiles((prevFiles) => {
+                                                    const updatedFiles = [...prevFiles];
+                                                    updatedFiles[index] = selectedFile;
+
+                                                    // Add a new empty input if last one was filled
+                                                    if (index === prevFiles.length - 1 && selectedFile) {
+                                                        updatedFiles.push(null);
+                                                    }
+
+                                                    return updatedFiles;
+                                                });
+                                            }}
+                                            className="block w-full"
+                                        />
+
+                                        {file && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setNewFiles((prevFiles) =>
+                                                        prevFiles.filter((_, i) => i !== index)
+                                                    )
+                                                }
+                                                className="text-red-500 text-sm hover:underline"
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                             <div className="flex justify-end space-x-2">
                                 <button
@@ -316,7 +364,7 @@ const AssigneeTaskDetails = () => {
                                     onClick={() => {
                                         setShowModal(false);
                                         setNewMessage("");
-                                        setNewFiles([]);
+                                        setNewFiles([null]);
                                         if (fileInputRef.current) fileInputRef.current.value = "";
                                     }}
                                     className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
@@ -334,6 +382,29 @@ const AssigneeTaskDetails = () => {
                     </div>
                 </div>
             )}
+
+{previewImageUrl && (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+        onClick={() => setPreviewImageUrl(null)}
+    >
+        <div className="relative">
+            <img
+                src={previewImageUrl}
+                alt="Preview"
+                className="max-w-full max-h-[90vh] rounded shadow-lg"
+                onClick={(e) => e.stopPropagation()} // Prevent modal close on image click
+            />
+            <button
+                onClick={() => setPreviewImageUrl(null)}
+                className="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full px-3 py-1 hover:bg-opacity-75"
+            >
+                ✕
+            </button>
+        </div>
+    </div>
+)}
+
         </div>
     );
 };
