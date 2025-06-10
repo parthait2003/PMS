@@ -11,9 +11,12 @@ const TaskDetailsPage = () => {
     const [projects, setProjects] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [newMessage, setNewMessage] = useState("");
-    const [newFiles, setNewFiles] = useState([]);
+    const [newFiles, setNewFiles] = useState([null]);
     const [users, setUsers] = useState([]);
     const fileInputRef = useRef(null);
+    const [previewImageUrl, setPreviewImageUrl] = useState(null);
+   
+
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -125,37 +128,39 @@ const TaskDetailsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+    
         const senderId = localStorage.getItem('userId');
         if (!senderId) {
             Swal.fire("Error", "User is not logged in", "error");
             return;
         }
-
+    
         try {
-            // Upload files to DigitalOcean Spaces
+            // Filter out any null or undefined files
+            const validFiles = newFiles.filter(file => file !== null);
+    
             const uploadedFileUrls = [];
-            for (const file of newFiles) {
+            for (const file of validFiles) {
                 const formData = new FormData();
                 formData.append('file', file);
-
+    
                 const uploadResponse = await fetch("/api/upload", {
                     method: "POST",
                     body: formData,
                 });
-
+    
                 if (!uploadResponse.ok) {
-                    throw new Error(`Failed to upload file: ${file.name}`);
+                    throw new Error(`Failed to upload file: ${file?.name || "Unknown file"}`);
                 }
-
+    
                 const uploadResult = await uploadResponse.json();
                 if (uploadResult.error) {
                     throw new Error(uploadResult.error);
                 }
-
+    
                 uploadedFileUrls.push(uploadResult.url);
             }
-
+    
             // Post message with file URLs
             const res = await fetch("/api/taskMessage", {
                 method: "POST",
@@ -168,25 +173,25 @@ const TaskDetailsPage = () => {
                     taskId: task._id,
                     assigneeId: task.assignee,
                     senderId: senderId,
-                    files: uploadedFileUrls, // Send URLs instead of file names
+                    files: uploadedFileUrls,
                 }),
             });
-
+    
             if (!res.ok) throw new Error("Failed to add message");
-
+    
             const updatedMessages = await res.json();
             setMessages((prev) => [...prev, updatedMessages.data]);
             setShowModal(false);
             setNewMessage("");
-            setNewFiles([]);
-            if (fileInputRef.current) fileInputRef.current.value = "";
+            setNewFiles([]);  // Clear all files
+            if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
             Swal.fire("Success", "Message and files submitted successfully", "success");
         } catch (error) {
             console.error("Error submitting message:", error);
             Swal.fire("Error", `Could not submit message: ${error.message}`, "error");
         }
     };
-
+    
     const getProjectName = (projectId) => {
         const project = projects.find(p => p._id === projectId);
         return project?.project || "Unknown Project";
@@ -263,20 +268,33 @@ const TaskDetailsPage = () => {
                                     <div>
                                         <span className="font-semibold text-gray-800 text-xl">Files:</span>{" "}
                                         {msg.files.length > 0 ? (
-                                            msg.files.map((url, index) => (
-                                                <a
-                                                    key={index}
-                                                    href={url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:underline"
-                                                >
-                                                   View File 
-                                                </a>
-                                            )).reduce((prev, curr, i) => (i === 0 ? [curr] : [...prev, ", ", curr]), [])
-                                        ) : (
-                                            "No files"
-                                        )}
+    <div className="flex flex-wrap gap-2">
+        {msg.files.map((url, index) => {
+            const isImage = /\.(jpeg|jpg|png|gif)$/i.test(url);
+            return isImage ? (
+                <img
+                    key={index}
+                    src={url}
+                    alt={`file-${index}`}
+                    className="w-20 h-20 object-cover rounded cursor-pointer border"
+                    onClick={() => setPreviewImageUrl(url)}
+                />
+            ) : (
+                <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                >
+                    View File
+                </a>
+            );
+        })}
+    </div>
+) : (
+    "No files"
+)}
                                     </div>
                                 </li>
                             );
@@ -286,54 +304,109 @@ const TaskDetailsPage = () => {
             </div>
 
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                        <h3 className="text-xl font-bold mb-4">Add New Message</h3>
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block font-medium mb-1">Message</label>
-                                <textarea
-                                    className="w-full p-2 border rounded"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="mb-4">
-                                <label className="block font-medium mb-1">File(s)</label>
-                                <input
-                                    type="file"
-                                    multiple
-                                    ref={fileInputRef}
-                                    onChange={(e) => setNewFiles(e.target.files ? Array.from(e.target.files) : [])}
-                                    className="block w-full"
-                                    accept="image/jpeg,image/png,application/pdf"
-                                />
-                            </div>
-                            <div className="flex justify-end space-x-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowModal(false);
-                                        setNewMessage("");
-                                        setNewFiles([]);
-                                        if (fileInputRef.current) fileInputRef.current.value = "";
-                                    }}
-                                    className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                >
-                                    Submit
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md overflow-y-auto max-h-[90vh]">
+      <h3 className="text-xl font-bold mb-4">Add New Message</h3>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block font-medium mb-1">Message</label>
+          <textarea
+            className="w-full p-2 border rounded"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block font-medium mb-2">File(s)</label>
+
+          {newFiles.map((file, index) => (
+            <div key={index} className="flex items-center gap-2 mb-2">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={(e) => {
+                  const selectedFile = e.target.files?.[0] || null;
+                  setNewFiles((prevFiles) => {
+                    const updatedFiles = [...prevFiles];
+                    updatedFiles[index] = selectedFile;
+
+                    // Add a new empty input if last one was filled
+                    if (index === prevFiles.length - 1 && selectedFile) {
+                      updatedFiles.push(null);
+                    }
+
+                    return updatedFiles;
+                  });
+                }}
+                className="block w-full"
+              />
+
+              {file && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewFiles((prevFiles) =>
+                      prevFiles.filter((_, i) => i !== index)
+                    )
+                  }
+                  className="text-red-500 text-sm hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowModal(false);
+              setNewMessage("");
+              setNewFiles([null]);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+            className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Submit
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+{previewImageUrl && (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+        onClick={() => setPreviewImageUrl(null)}
+    >
+        <div className="relative">
+            <img
+                src={previewImageUrl}
+                alt="Preview"
+                className="max-w-full max-h-[90vh] rounded shadow-lg"
+                onClick={(e) => e.stopPropagation()} // Prevent modal close on image click
+            />
+            <button
+                onClick={() => setPreviewImageUrl(null)}
+                className="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full px-3 py-1 hover:bg-opacity-75"
+            >
+                ✕
+            </button>
+        </div>
+    </div>
+)}
+
         </div>
     );
 };
