@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { format } from "date-fns";
 
+
 const TaskDetailsPage = () => {
     const { id } = useParams();
     const [task, setTask] = useState(null);
